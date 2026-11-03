@@ -68,13 +68,28 @@ def test_the_root_bun_lock_is_the_only_lockfile():
     assert locks == ["bun.lock"], f"nested bun lockfiles drift from the workspace lock: {locks}"
 
 
+# Packages built by a different, pinned toolchain that must not join the bun
+# workspace. Each entry needs its own lockfile and its own CI workflow.
+_SEPARATE_TOOLCHAINS = {
+    # StartOS package: Start9's s9pk.mk runs `npm ci` against package-lock.json
+    # and pins @start9labs/start-sdk; built by .github/workflows/startos.yml.
+    "deploy/startos": "package-lock.json",
+}
+
+
 def test_every_package_manifest_is_in_the_workspace():
     workspaces = set(_PACKAGE.get("workspaces", []))
-    manifests = {str(Path(p).parent) for p in _tracked("*package.json")}
+    manifests = {str(Path(p).parent) for p in _tracked("*package.json")} - set(_SEPARATE_TOOLCHAINS)
     assert manifests == {"."} | workspaces, (
         f"package.json files outside the bun workspace get their own dependency tree: "
         f"{sorted(manifests - {'.'} - workspaces)}"
     )
+
+
+def test_separate_toolchain_packages_are_locked():
+    for directory, lockfile in _SEPARATE_TOOLCHAINS.items():
+        assert f"{directory}/package.json" in _tracked("*package.json"), f"{directory} is no longer a package"
+        assert f"{directory}/{lockfile}" in _tracked(f"*{lockfile}"), f"{directory} must commit {lockfile}"
 
 
 def test_workspace_manifests_agree_on_shared_dependency_ranges():
