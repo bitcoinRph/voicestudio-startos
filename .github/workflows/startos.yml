@@ -1,0 +1,78 @@
+name: StartOS package
+
+# Builds the StartOS .s9pk files in deploy/startos. The package wraps the
+# upstream images that docker.yml publishes, so it builds only when the
+# package itself changes, or on demand.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'deploy/startos/**'
+      - '.github/workflows/startos.yml'
+
+permissions: {}
+
+concurrency:
+  group: startos-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: deploy/startos
+
+jobs:
+  build:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: generic-x86, runner: ubuntu-22.04 }
+          - { target: generic-arm, runner: ubuntu-24.04-arm }
+          - { target: rocm-x86, runner: ubuntu-22.04 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      # The images are 4.5-10 GB compressed and are unpacked, then packed
+      # again into the s9pk. Reclaim what these jobs never use (same list as
+      # docker.yml) before anything is installed.
+      - name: Free runner disk space
+        working-directory: .
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/.ghcup /opt/hostedtoolcache /usr/share/swift \
+            /usr/local/share/boost /usr/local/lib/node_modules
+          sudo docker image prune --all --force
+          sudo apt-get clean
+          df -h /
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: Start9Labs/start-technologies/.github/actions/setup-build-env@e6ece9e3b7f27e8440bb291c7837bbea579c8e8a # master 2026-11-03
+
+      # start-cli signs with a workspace key found by walking up from the
+      # package; a CI checkout has none, so provision a throwaway one.
+      - name: Provision a workspace signing key
+        run: |
+          start-cli init-key
+          mkdir -p ../../.startos
+          cp ~/.startos/id.key.pem ../../.startos/build.key.pem
+
+      - run: npm ci
+
+      - name: Build ${{ matrix.target }}
+        run: make ${{ matrix.target }}
+
+      - name: Checksums
+        run: sha256sum *.s9pk && df -h /
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: voicestudio_${{ matrix.target }}
+          path: deploy/startos/*.s9pk
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
