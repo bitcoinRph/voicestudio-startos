@@ -24,16 +24,9 @@ jobs:
   build:
     permissions:
       contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { target: generic-x86, runner: ubuntu-22.04 }
-          - { target: generic-arm, runner: ubuntu-24.04-arm }
-          - { target: rocm-x86, runner: ubuntu-22.04 }
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-22.04
     steps:
-      # The images are 4.5-10 GB compressed and are unpacked, then packed
+      # The image is about 5.5 GB compressed. It is unpacked, then packed
       # again into the s9pk. Reclaim what these jobs never use (same list as
       # docker.yml) before anything is installed.
       - name: Free runner disk space
@@ -62,15 +55,15 @@ jobs:
 
       - run: npm ci
 
-      - name: Build ${{ matrix.target }}
-        run: make ${{ matrix.target }}
+      - name: Build x86_64
+        run: make x86
 
       - name: Checksums
         run: sha256sum *.s9pk && df -h /
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: voicestudio_${{ matrix.target }}
+          name: voicestudio_x86_64
           path: deploy/startos/*.s9pk
           if-no-files-found: error
           retention-days: 7

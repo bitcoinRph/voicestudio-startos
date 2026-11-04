@@ -37,4 +37,4 @@ To have an agent put VoiceStudio audio into videos, install HyperFrames on the s
 
 ## Hardware
 
-VoiceStudio uses an NVIDIA GPU when your server has one. StartOS offers a separate AMD (ROCm) build on servers with an AMD GPU. Without a GPU, VoiceStudio runs on the CPU, which is much slower, especially for dubbing and long narration.
+VoiceStudio runs on the CPU. On a CPU, transcription and short narration are practical. Long narration and dubbing are slow: a GPU is often 10 to 50 times faster. If you add an NVIDIA GPU to your server, VoiceStudio uses it automatically.

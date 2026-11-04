@@ -21,16 +21,14 @@ Technical reference for the StartOS package of [VoiceStudio](https://github.com/
 
 ## Image and Container Runtime
 
-| Variant   | Arch              | Image                                                                         | Hardware requirement |
-| --------- | ----------------- | ----------------------------------------------------------------------------- | -------------------- |
-| `generic` | x86_64            | `ghcr.io/debpalash/voicestudio:<version>` (CUDA build, falls back to CPU)     | none (fallback)      |
-| `generic` | aarch64           | `ghcr.io/debpalash/voicestudio:<version>-cuda-arm64` (NVIDIA build)           | none (fallback)      |
-| `rocm`    | x86_64            | `ghcr.io/debpalash/voicestudio:<version>-rocm`                                | `amdgpu` display device |
+| Arch   | Image                                                                     |
+| ------ | ------------------------------------------------------------------------- |
+| x86_64 | `ghcr.io/debpalash/voicestudio:<version>` (upstream's CUDA build)         |
 
-- Upstream images are used unchanged, pinned by index digest in `startos/manifest/index.ts`. `Dockerfile` only selects the per-arch tag (`FROM --platform=… ${AMD64_IMAGE}` / `${ARM64_IMAGE}`), because upstream publishes the two arches under different tags.
-- `hardwareAcceleration: true` on both variants; `nvidiaContainer: true` on `generic`.
+- Upstream's image is used unchanged, pinned by index digest in `startos/manifest/index.ts` and passed to `Dockerfile` as the `IMAGE` build arg.
+- It runs on the CPU. With `hardwareAcceleration: true` and `nvidiaContainer: true`, it uses an NVIDIA GPU when the server has one and StartOS passes it through.
 - Entrypoint: upstream's (`python3 backend/docker_entrypoint.py`, which execs uvicorn on `0.0.0.0:3900`). Runs as root, as upstream does.
-- The aarch64 image is upstream's NVIDIA build. Upstream documents it for NVIDIA ARM servers; CPU-only aarch64 use is untested.
+- Only x86_64 is built. Upstream's aarch64 image is an NVIDIA-only build, and its ROCm image targets AMD GPUs; add them back as variants if a server needs them.
 
 ## Volume and Data Layout
 
@@ -125,7 +123,7 @@ None. The key is generated, so nothing blocks the first start.
 ```yaml
 package_id: voicestudio
 upstream: https://github.com/debpalash/VoiceStudio
-variants: { generic: [x86_64, aarch64], rocm: [x86_64] }
+arch: [x86_64]   # CPU; NVIDIA GPU used when present
 host_id: main
 internal_port: 3900
 interfaces: { ui: /, api: /, openai_compatible: /v1, mcp: /mcp/ }

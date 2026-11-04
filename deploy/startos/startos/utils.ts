@@ -22,7 +22,5 @@ export const mcpPath = '/mcp/'
 /** Path of the OpenAI-compatible API, relative to the API interface. */
 export const openAiPath = '/v1'
 
-export const variant = (process.env.VARIANT || 'generic') as 'generic' | 'rocm'
-
 export const generateApiKey = () =>
   utils.getDefaultString({ charset: 'a-z,A-Z,0-9', len: 40 })

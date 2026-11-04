@@ -6,7 +6,7 @@ The package wraps upstream's published images. To move to a new VoiceStudio rele
 
    ```sh
    TOKEN=$(curl -fsS "https://ghcr.io/token?scope=repository:debpalash/voicestudio:pull" | jq -r .token)
-   for t in X.Y.Z X.Y.Z-cuda-arm64 X.Y.Z-rocm; do
+   for t in X.Y.Z; do
      printf '%s ' "$t"
      curl -fsSI -H "Authorization: Bearer $TOKEN" \
        -H 'Accept: application/vnd.oci.image.index.v1+json' \
@@ -14,10 +14,10 @@ The package wraps upstream's published images. To move to a new VoiceStudio rele
    done
    ```
 
-2. Update the three `tag@digest` constants in `startos/manifest/index.ts` and the two `ARG` defaults in `Dockerfile`.
+2. Update the `tag@digest` constant in `startos/manifest/index.ts` and the `ARG IMAGE` default in `Dockerfile`.
 3. Set `version` in `startos/versions/current.ts` to `X.Y.Z:0` and rewrite `releaseNotes` for this release (all locales).
 4. Read upstream's `CHANGELOG.md` for new environment variables, ports, data paths or auth changes, and update `startos/main.ts`, `README.md` and `instructions.md` if any affect the package.
-5. Run `npm ci && npx tsc --noEmit`, then build: push the branch and let `.github/workflows/startos.yml` build all three targets.
+5. Run `npm ci && npx tsc --noEmit`, then build: push the branch and let `.github/workflows/startos.yml` build it.
 6. Install the result on a StartOS server and check: Web UI login with the key, one speech generation, one transcription, the MCP endpoint from an agent, and HyperFrames' `voicestudio_status`.
 
 Bump the StartOS revision (`X.Y.Z:1`, `:2`, …) for package-only changes.
